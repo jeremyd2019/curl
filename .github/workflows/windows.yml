@@ -194,6 +194,7 @@ jobs:
         shell: pwsh
 
       - uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
+        id: msys2
         if: ${{ matrix.sys == 'msys' }}
         with:
           msystem: ${{ matrix.sys }}
@@ -211,6 +212,7 @@ jobs:
             ${{ matrix.install }}
 
       - uses: msys2/setup-msys2@61f9e5e925871ba6c9e3e8da24ede83ea27fa91f # v2
+        id: msys
         if: ${{ matrix.sys != 'msys' }}
         with:
           msystem: ${{ matrix.sys }}
@@ -331,12 +333,25 @@ jobs:
           /usr/bin/pacman --noconfirm --noprogressbar --sync --needed openssh
           /c/ProgramData/chocolatey/choco.exe install --yes --no-progress --limit-output --timeout 180 --force stunnel || true
 
-      - name: 'downgrade msys2-runtime'
-        if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' && matrix.sys != 'msys' }}
+      - name: overwrite MSYS2 runtime with the msys2-runtime build's artifacts
+        if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
         timeout-minutes: 2
-        # Downgrade to a known good MSYS2 runtime version to avoid the performance regression
-        # causing runtests.pl to run at 2-3x reduced speed.
-        run: exec /usr/bin/pacman --noconfirm --noprogressbar --upgrade https://mirror.msys2.org/msys/x86_64/msys2-runtime-3.5.4-8-x86_64.pkg.tar.zst
+        env:
+          MSYS2_RUNTIME_ARTIFACT_URL: https://github.com/msys2/msys2-runtime/actions/runs/13929126734/artifacts/2774544374
+        shell: bash
+        run: |
+          set -x &&
+          case "$MSYS2_RUNTIME_ARTIFACT_URL" in
+          https://github.com/*/actions/runs/[0-9]*/artifacts/[0-9]*)
+            MSYS2_RUNTIME_ARTIFACT_URL="$(echo "$MSYS2_RUNTIME_ARTIFACT_URL" |
+              sed 's|^\(https://\)\(github.com/\)\(.*/actions/\)runs/[0-9]*/\(artifacts/[0-9]*\)$|\1api.\2repos/\3\4/zip|')"
+              ;;
+          esac
+
+          curl -H "Authorization: token ${{secrets.GITHUB_TOKEN}}" \
+              -fLo msys2-runtime.zip "$MSYS2_RUNTIME_ARTIFACT_URL" &&
+          cd "$(cygpath '${{ matrix.sys == 'msys' && steps.msys2.outputs.msys2-location || steps.msys.outputs.msys2-location }}')" &&
+          unzip -qo '${{github.workspace}}/msys2-runtime.zip'
 
       - name: 'run tests'
         if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
@@ -501,12 +516,25 @@ jobs:
           /c/ProgramData/chocolatey/choco.exe install --yes --no-progress --limit-output --timeout 180 --force stunnel || true
           python3 -m pip --disable-pip-version-check --no-input --no-cache-dir install --progress-bar off --prefer-binary impacket
 
-      - name: 'downgrade msys2-runtime'
+      - name: overwrite MSYS2 runtime with the msys2-runtime build's artifacts
         if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
         timeout-minutes: 2
-        # Downgrade to a known good MSYS2 runtime version to avoid the performance regression
-        # causing runtests.pl to run at 2-3x reduced speed.
-        run: exec /usr/bin/pacman --noconfirm --noprogressbar --upgrade https://mirror.msys2.org/msys/x86_64/msys2-runtime-3.5.4-8-x86_64.pkg.tar.zst
+        env:
+          MSYS2_RUNTIME_ARTIFACT_URL: https://github.com/msys2/msys2-runtime/actions/runs/13929126734/artifacts/2774544374
+        shell: bash
+        run: |
+          set -x &&
+          case "$MSYS2_RUNTIME_ARTIFACT_URL" in
+          https://github.com/*/actions/runs/[0-9]*/artifacts/[0-9]*)
+            MSYS2_RUNTIME_ARTIFACT_URL="$(echo "$MSYS2_RUNTIME_ARTIFACT_URL" |
+              sed 's|^\(https://\)\(github.com/\)\(.*/actions/\)runs/[0-9]*/\(artifacts/[0-9]*\)$|\1api.\2repos/\3\4/zip|')"
+              ;;
+          esac
+
+          curl -H "Authorization: token ${{secrets.GITHUB_TOKEN}}" \
+              -fLo msys2-runtime.zip "$MSYS2_RUNTIME_ARTIFACT_URL" &&
+          cd /c/msys64 &&
+          unzip -qo '${{github.workspace}}/msys2-runtime.zip'
 
       - name: 'run tests'
         if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
@@ -918,12 +946,25 @@ jobs:
           /c/ProgramData/chocolatey/choco.exe install --yes --no-progress --limit-output --timeout 180 --force ${chocopkg} stunnel || true
           python3 -m pip --disable-pip-version-check --no-input --no-cache-dir install --progress-bar off --prefer-binary impacket
 
-      - name: 'downgrade msys2-runtime'
+      - name: overwrite MSYS2 runtime with the msys2-runtime build's artifacts
         if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
         timeout-minutes: 2
-        # Downgrade to a known good MSYS2 runtime version to avoid the performance regression
-        # causing runtests.pl to run at 2-3x reduced speed.
-        run: exec /usr/bin/pacman --noconfirm --noprogressbar --upgrade https://mirror.msys2.org/msys/x86_64/msys2-runtime-3.5.4-8-x86_64.pkg.tar.zst
+        env:
+          MSYS2_RUNTIME_ARTIFACT_URL: https://github.com/msys2/msys2-runtime/actions/runs/13929126734/artifacts/2774544374
+        shell: bash
+        run: |
+          set -x &&
+          case "$MSYS2_RUNTIME_ARTIFACT_URL" in
+          https://github.com/*/actions/runs/[0-9]*/artifacts/[0-9]*)
+            MSYS2_RUNTIME_ARTIFACT_URL="$(echo "$MSYS2_RUNTIME_ARTIFACT_URL" |
+              sed 's|^\(https://\)\(github.com/\)\(.*/actions/\)runs/[0-9]*/\(artifacts/[0-9]*\)$|\1api.\2repos/\3\4/zip|')"
+              ;;
+          esac
+
+          curl -H "Authorization: token ${{secrets.GITHUB_TOKEN}}" \
+              -fLo msys2-runtime.zip "$MSYS2_RUNTIME_ARTIFACT_URL" &&
+          cd /c/msys64 &&
+          unzip -qo '${{github.workspace}}/msys2-runtime.zip'
 
       - name: 'run tests'
         if: ${{ matrix.tflags != 'skipall' && matrix.tflags != 'skiprun' }}
